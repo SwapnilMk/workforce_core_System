@@ -8,19 +8,205 @@ datasource db {
 }
 
 enum UserRole {
-  Admin
-  Manager
-  Employee
+  ADMIN @map("Admin")
+  SUPER_ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
 }
 
-model User {
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+  REMOTE
+  ON_LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Company {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String    @unique
-  password      String
-  role          UserRole  @default(Employee)
+  name          String
+  logo          String?
+  address       String?
+  officeRadius  Float     @default(200) // in meters
+  latitude      Float?
+  longitude     Float?
+  users         User[]
+  departments   Department[]
+  holidays      Holiday[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  @@map("companies")
+}
+
+model Department {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  companyId String   @db.ObjectId
+  company   Company  @relation(fields: [companyId], references: [id])
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("departments")
+}
+
+model User {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String?
+  email           String    @unique
+  password        String
+  role            UserRole  @default(EMPLOYEE)
+  companyId       String?   @db.ObjectId
+  company         Company?  @relation(fields: [companyId], references: [id])
+  departmentId    String?   @db.ObjectId
+  department      Department? @relation(fields: [departmentId], references: [id])
+  
+  // Salary Structure
+  basicSalary     Float     @default(0)
+  hra             Float     @default(0)
+  allowances      Float     @default(0)
+  pf              Float     @default(0)
+  esi             Float     @default(0)
+  tax             Float     @default(0)
+  professionalTax Float     @default(0)
+
+  // Settings
+  biometricEnabled Boolean  @default(false)
+  faceIdEnabled    Boolean  @default(false)
+  
+  attendances     Attendance[]
+  leaves          Leave[]
+  payrolls        Payroll[]
+  authenticators  Authenticator[]
+  loginHistory    LoginHistory[]
+  notifications   Notification[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
   @@map("users")
+}
+
+model Attendance {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id])
+  date            DateTime  @default(now())
+  checkIn         DateTime?
+  checkOut        DateTime?
+  status          AttendanceStatus @default(PRESENT)
+  latitude        Float?
+  longitude       Float?
+  isMockLocation  Boolean   @default(false)
+  isVpnDetected   Boolean   @default(false)
+  workHours       Float     @default(0)
+  overtime        Float     @default(0)
+  breakDuration   Float     @default(0) // in minutes
+  selfieUrl       String?
+  failedAttempt   Boolean   @default(false)
+  errorMessage    String?
+
+  @@map("attendances")
+}
+
+model Leave {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String      @db.ObjectId
+  user        User        @relation(fields: [userId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  type        String      // e.g., Sick, Casual, Annual
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  approvedBy  String?     @db.ObjectId
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("leaves")
+}
+
+model Payroll {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id])
+  month           Int
+  year            Int
+  basicSalary     Float
+  hra             Float
+  allowances      Float
+  bonus           Float     @default(0)
+  overtimePay     Float     @default(0)
+  pf              Float
+  esi             Float
+  tax             Float
+  professionalTax Float
+  deductions      Float     @default(0)
+  netSalary       Float
+  status          String    @default("PENDING") // PENDING, PAID
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("payrolls")
+}
+
+model Holiday {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String   @db.ObjectId
+  company   Company  @relation(fields: [companyId], references: [id])
+  date      DateTime
+  name      String
+  createdAt DateTime @default(now())
+
+  @@map("holidays")
+}
+
+model Authenticator {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  credentialID         Bytes    @unique
+  credentialPublicKey  Bytes
+  counter              BigInt
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  userId               String   @db.ObjectId
+  user                 User     @relation(fields: [userId], references: [id])
+
+  @@map("authenticators")
+}
+
+model LoginHistory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  ip        String?
+  userAgent String?
+  location  String?
+  status    String   // SUCCESS, FAILED
+  isTrusted Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("login_history")
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   // INFO, WARNING, SUCCESS, ERROR
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
 }

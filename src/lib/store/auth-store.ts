@@ -1,20 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type Role = 'Admin' | 'Manager' | 'Employee';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'HR' | 'MANAGER' | 'EMPLOYEE';
 
 interface User {
   id: string;
+  name: string | null;
   email: string;
-  name: string;
   role: Role;
-  avatar?: string;
+  companyId?: string | null;
 }
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, role: Role, name?: string) => void;
+  setUser: (user: User | null) => void;
+  login: (user: User) => void;
   logout: () => void;
 }
 
@@ -23,19 +24,8 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: (email, role, providedName) => {
-        // Mock login
-        const defaultName = email.split('@')[0];
-        const name = providedName || defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
-        const user: User = {
-          id: Math.random().toString(36).substring(7),
-          email,
-          name,
-          role,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-        };
-        set({ user, isAuthenticated: true });
-      },
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      login: (user) => set({ user, isAuthenticated: true }),
       logout: () => set({ user: null, isAuthenticated: false }),
     }),
     {

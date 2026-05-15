@@ -10,7 +10,7 @@ import Link from 'next/link';
 export default function ExclusivePage() {
   const { user } = useAuthStore();
   
-  const isAuthorized = user?.role === 'Admin' || user?.role === 'Manager';
+  const isAuthorized = user?.role === 'SUPER_ADMIN' || user?.role === 'MANAGER';
 
   if (!isAuthorized) {
     return (

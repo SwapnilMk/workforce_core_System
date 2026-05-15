@@ -48,14 +48,15 @@ export const navGroups: NavGroup[] = [
     ]
   },
   {
-    label: 'Workforce',
+    label: 'Workforce Management',
     items: [
       {
         title: 'Employees',
-        url: '/dashboard/users',
+        url: '/dashboard/employees',
         icon: 'teams',
-        shortcut: ['u', 'u'],
+        shortcut: ['e', 'e'],
         isActive: false,
+        access: { roles: ['SUPER_ADMIN', 'ADMIN', 'HR', 'MANAGER'] },
         items: []
       },
       {
@@ -67,11 +68,64 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
-        title: 'Leave',
-        url: '/dashboard/leave',
+        title: 'Leaves',
+        url: '/dashboard/leaves',
         icon: 'kanban',
         shortcut: ['l', 'l'],
         isActive: false,
+        items: []
+      },
+      {
+        title: 'Announcements',
+        url: '/dashboard/announcements',
+        icon: 'notification',
+        shortcut: ['n', 'n'],
+        isActive: false,
+        items: []
+      }
+    ]
+  },
+  {
+    label: 'Financials',
+    items: [
+      {
+        title: 'Payroll',
+        url: '/dashboard/payroll',
+        icon: 'billing',
+        shortcut: ['p', 'y'],
+        isActive: false,
+        access: { roles: ['SUPER_ADMIN', 'ADMIN', 'HR', 'EMPLOYEE'] },
+        items: []
+      },
+      {
+        title: 'Salary Calculator',
+        url: '/dashboard/salary-calculator',
+        icon: 'billing',
+        shortcut: ['s', 'c'],
+        isActive: false,
+        items: []
+      }
+    ]
+  },
+  {
+    label: 'Administration',
+    items: [
+      {
+        title: 'Reports',
+        url: '/dashboard/reports',
+        icon: 'media',
+        shortcut: ['r', 'r'],
+        isActive: false,
+        access: { roles: ['SUPER_ADMIN', 'ADMIN', 'HR', 'MANAGER'] },
+        items: []
+      },
+      {
+        title: 'Settings',
+        url: '/dashboard/settings',
+        icon: 'settings',
+        shortcut: ['s', 's'],
+        isActive: false,
+        access: { roles: ['SUPER_ADMIN', 'ADMIN'] },
         items: []
       }
     ]

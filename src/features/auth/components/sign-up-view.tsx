@@ -23,7 +23,7 @@ export default function SignUpViewPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>('Employee');
+  const [role, setRole] = useState<Role>('EMPLOYEE');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
@@ -46,7 +46,7 @@ export default function SignUpViewPage() {
         throw new Error(data.error || 'Signup failed');
       }
 
-      login(data.user.email, data.user.role, data.user.name);
+      login(data.user);
       setIsLoading(false);
       router.push('/dashboard/overview');
     } catch (error: any) {
@@ -140,9 +140,9 @@ export default function SignUpViewPage() {
                     <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#020817] border-white/10 text-white">
-                    <SelectItem value="Employee">Employee</SelectItem>
-                    <SelectItem value="Manager">Manager</SelectItem>
-                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="SUPER_ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

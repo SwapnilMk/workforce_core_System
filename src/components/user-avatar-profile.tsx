@@ -5,8 +5,8 @@ interface UserAvatarProfileProps {
   showInfo?: boolean;
   user: {
     avatar?: string;
-    name: string;
-    email: string;
+    name?: string | null;
+    email?: string | null;
   } | null;
 }
 

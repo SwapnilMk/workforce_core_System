@@ -22,14 +22,15 @@ export default function ProfilePage() {
           <CardContent className="relative flex flex-col items-center -mt-16 pb-8">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-white shadow-xl">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback className="text-3xl font-bold bg-muted">{user.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-3xl font-bold bg-muted">
+                  {(user.name || user.email).charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-lg border-2 border-white">
                 <Camera className="w-4 h-4" />
               </Button>
             </div>
-            <h2 className="mt-4 text-2xl font-bold">{user.name}</h2>
+            <h2 className="mt-4 text-2xl font-bold">{user.name || 'User'}</h2>
             <p className="text-muted-foreground font-medium">{user.role}</p>
             <div className="mt-6 w-full space-y-3">
               <div className="flex items-center gap-3 text-sm text-muted-foreground px-4 py-2 bg-muted/50 rounded-lg">
@@ -56,7 +57,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first-name">First Name</Label>
-                  <Input id="first-name" defaultValue={user.name} />
+                  <Input id="first-name" defaultValue={user.name || ''} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last-name">Last Name</Label>

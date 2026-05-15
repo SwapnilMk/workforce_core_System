@@ -30,11 +30,11 @@ const chartData = [
 
 const chartConfig = {
   desktop: {
-    label: 'Desktop',
+    label: 'Office',
     color: 'var(--chart-1)'
   },
   mobile: {
-    label: 'Mobile',
+    label: 'Remote',
     color: 'var(--chart-2)'
   }
 } satisfies ChartConfig;
@@ -44,13 +44,13 @@ export function AreaGraph() {
     <Card>
       <CardHeader>
         <CardTitle>
-          Dotted Area Chart
+          Workforce Activity
           <Badge variant='outline'>
             <Icons.trendingUp />
-            -5.2%
+            +5.2%
           </Badge>
         </CardTitle>
-        <CardDescription>Showing total visitors for the last 6 months</CardDescription>
+        <CardDescription>Showing active workforce participation for the last 12 months</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

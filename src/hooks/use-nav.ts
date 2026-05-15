@@ -31,7 +31,7 @@ export function useFilteredNavItems(items: NavItem[]) {
         if (!item.access) return true;
         
         // Simple role-based access for the custom store
-        if (item.access.role && user.role.toLowerCase() !== item.access.role.toLowerCase()) {
+        if (item.access.roles && !item.access.roles.some(r => r.toUpperCase() === user.role.toUpperCase())) {
           return false;
         }
 
@@ -41,7 +41,7 @@ export function useFilteredNavItems(items: NavItem[]) {
         if (item.items && item.items.length > 0) {
           const filteredChildren = item.items.filter((childItem) => {
             if (!childItem.access) return true;
-            if (childItem.access.role && user.role.toLowerCase() !== childItem.access.role.toLowerCase()) {
+            if (childItem.access.roles && !childItem.access.roles.some(r => r.toUpperCase() === user.role.toUpperCase())) {
               return false;
             }
             return true;

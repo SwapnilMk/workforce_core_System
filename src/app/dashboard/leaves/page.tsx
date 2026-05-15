@@ -18,7 +18,7 @@ export default function LeavePage() {
     { id: 3, type: 'Privilege Leave', start: '2024-04-15', end: '2024-04-20', status: 'Rejected', reason: 'Urgent project' },
   ]);
 
-  const isAdminOrManager = user?.role === 'Admin' || user?.role === 'Manager';
+  const isAdminOrManager = user?.role === 'SUPER_ADMIN' || user?.role === 'MANAGER';
 
   return (
     <div className="p-6 space-y-6">

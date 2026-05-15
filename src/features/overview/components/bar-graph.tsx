@@ -23,11 +23,11 @@ const chartData = [
 
 const chartConfig = {
   desktop: {
-    label: 'Desktop',
+    label: 'New Hires',
     color: 'var(--chart-1)'
   },
   mobile: {
-    label: 'Mobile',
+    label: 'Resignations',
     color: 'var(--chart-2)'
   }
 } satisfies ChartConfig;
@@ -37,13 +37,13 @@ export function BarGraph() {
     <Card>
       <CardHeader>
         <CardTitle>
-          Bar Chart - Multiple
+          Recruitment vs Attrition
           <Badge variant='outline'>
-            <Icons.trendingDown />
-            -5.2%
+            <Icons.trendingUp />
+            +8.5%
           </Badge>
         </CardTitle>
-        <CardDescription>January - June 2025</CardDescription>
+        <CardDescription>January - June 2026</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
