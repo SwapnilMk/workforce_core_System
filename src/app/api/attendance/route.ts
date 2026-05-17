@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const limit = Number(searchParams.get('limit') ?? 50);
 
-    let where: any = {};
+    const { getTenantFilter } = require('@/lib/tenant');
+    let where: any = {
+      ...getTenantFilter(session.user),
+    };
 
     // Strict RBAC filtering
     if (role === 'EMPLOYEE') {
@@ -33,11 +36,6 @@ export async function GET(request: NextRequest) {
         where.user = { departmentId: manager.departmentId };
       } else {
         where.userId = userId;
-      }
-    } else if (role === 'HR' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      // HR & Admins see all logs for their company
-      if (companyId) {
-        where.user = { companyId };
       }
     }
 
@@ -125,6 +123,7 @@ export async function POST(request: NextRequest) {
         await prisma.attendance.create({
           data: {
             userId,
+            companyId: user.companyId,
             latitude,
             longitude,
             isMockLocation: !!isMockLocation,
@@ -161,6 +160,7 @@ export async function POST(request: NextRequest) {
       const record = await prisma.attendance.create({
         data: {
           userId,
+          companyId: user.companyId,
           checkIn: now,
           status,
           latitude,
@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
       await prisma.notification.create({
         data: {
           userId,
+          companyId: user.companyId,
           title: 'Punch In Verified',
           message: `Successfully verified check-in at ${now.toLocaleTimeString()}`,
           type: 'SUCCESS'
@@ -218,6 +219,7 @@ export async function POST(request: NextRequest) {
       await prisma.notification.create({
         data: {
           userId,
+          companyId: user.companyId,
           title: 'Punch Out Verified',
           message: `Successfully verified check-out at ${now.toLocaleTimeString()}. Work hours: ${workHours} hrs.`,
           type: 'INFO'

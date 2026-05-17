@@ -36,6 +36,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Payroll record not found' }, { status: 404 });
     }
 
+    const targetCompanyId = existingPayroll.companyId || existingPayroll.user?.companyId;
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, targetCompanyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
+
     const updatedPayroll = await prisma.payroll.update({
       where: { id },
       data: {
@@ -49,6 +55,7 @@ export async function PUT(
       await prisma.notification.create({
         data: {
           userId: existingPayroll.userId,
+          companyId: targetCompanyId || null,
           title: 'Salary Credited',
           message: `Your salary for ${existingPayroll.month}/${existingPayroll.year} of INR ${existingPayroll.netSalary.toLocaleString()} has been credited successfully. Txn ID: ${transactionId || 'N/A'}.`,
           type: 'SUCCESS'

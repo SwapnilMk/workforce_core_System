@@ -16,8 +16,8 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn',
-  description: 'Basic dashboard with Next.js and Shadcn'
+  title: 'EGC Workforce',
+  description: 'EGC Workforce Management System'
 };
 
 export const viewport: Viewport = {

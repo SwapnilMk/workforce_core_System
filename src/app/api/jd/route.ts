@@ -30,7 +30,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const { getTenantFilter } = require('@/lib/tenant');
     const where: any = {
+      ...getTenantFilter(session.user),
       date: {
         gte: startOfDay,
         lte: endOfDay
@@ -49,10 +51,6 @@ export async function GET(request: NextRequest) {
         where.user = { departmentId: manager.departmentId };
       } else {
         where.userId = userId;
-      }
-    } else if (role === 'HR' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      if (companyId) {
-        where.user = { companyId };
       }
     }
 
@@ -126,6 +124,7 @@ export async function POST(request: NextRequest) {
       jd = await prisma.dailyJd.create({
         data: {
           userId,
+          companyId: session.user.companyId || null,
           date: new Date(),
           tasksCompleted,
           tasksPending: tasksPending || '',

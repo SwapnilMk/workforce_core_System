@@ -7,13 +7,22 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
 
+    const { getSession } = require('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const page = Number(searchParams.get('page') ?? 1);
     const limit = Number(searchParams.get('limit') ?? 10);
     const rolesParam = searchParams.get('roles'); 
     const search = searchParams.get('search') ?? undefined;
 
     // Build filter
-    const where: any = {};
+    const { getTenantFilter } = require('@/lib/tenant');
+    const where: any = {
+      ...getTenantFilter(session.user),
+    };
 
     if (search) {
       where.OR = [
@@ -94,8 +103,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const { getSession } = require('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN' && session.user.role !== 'HR') {
+      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    }
+
     const body = await request.json();
-    const { first_name, last_name, email, role, phone } = body;
+    const { first_name, last_name, email, role, phone, companyId } = body;
 
     let dbRole: UserRole = UserRole.EMPLOYEE;
     const rUpper = (role || '').toUpperCase().replace(' ', '_');
@@ -113,6 +132,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         role: dbRole,
+        companyId: (session.user.role === 'SUPER_ADMIN' ? companyId : session.user.companyId) || null,
         biometricEnabled: false,
       }
     });

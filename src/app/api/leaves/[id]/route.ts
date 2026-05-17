@@ -38,6 +38,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Leave request not found' }, { status: 404 });
     }
 
+    const targetCompanyId = leaveRequest.companyId || leaveRequest.user?.companyId;
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, targetCompanyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
+
     // Check manager's permission (Manager can only approve team leaves)
     if (role === 'MANAGER') {
       const manager = await prisma.user.findUnique({
@@ -62,6 +68,7 @@ export async function PUT(
     await prisma.notification.create({
       data: {
         userId: leaveRequest.userId,
+        companyId: targetCompanyId || null,
         title: `Leave Request ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
         message: `Your leave request from ${leaveRequest.startDate.toLocaleDateString()} has been ${status.toLowerCase()} by ${session.user.name}. ${remarks ? 'Remarks: ' + remarks : ''}`,
         type: status === 'APPROVED' ? 'SUCCESS' : 'ERROR'

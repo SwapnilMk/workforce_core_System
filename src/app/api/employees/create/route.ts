@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
           email,
           password: hashedPassword,
           role: dbRole,
-          companyId: companyId || null,
+          companyId: (session.user.role === 'SUPER_ADMIN' ? companyId : session.user.companyId) || null,
           departmentId: departmentId || null,
           basicSalary: basic,
           hra: hraAmount,

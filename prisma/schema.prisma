@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -32,18 +31,42 @@ enum LeaveStatus {
 }
 
 model Company {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  logo          String?
-  address       String?
-  officeRadius  Float     @default(200) // in meters
-  latitude      Float?
-  longitude     Float?
-  users         User[]
-  departments   Department[]
-  holidays      Holiday[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String     @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  logo               String?
+  email              String?
+  phone              String?
+  website            String?
+  industryType       String?
+  gstNumber          String?
+  panNumber          String?
+  cinNumber          String?
+  country            String?
+  state              String?
+  city               String?
+  zipCode            String?
+  address            String?
+  officeRadius       Float      @default(200) // in meters
+  latitude           Float?
+  longitude          Float?
+  attendanceRules    String?
+  shiftPolicies      String?
+  planType           String     @default("Trial") // Trial, Pro, Enterprise
+  employeeLimit      Int        @default(50)
+  storageLimit       Float      @default(10) // in GB
+  activeModules      String[]   @default(["ALL"])
+  primaryColor       String?    @default("#1a365d")
+  secondaryColor     String?    @default("#0f172a")
+  themePreference    String?    @default("dark")
+  status             String     @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED, DELETION_PENDING
+  deletionRequestedAt DateTime?
+  
+  users              User[]
+  departments        Department[]
+  holidays           Holiday[]
+  
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   @@map("companies")
 }
@@ -113,6 +136,7 @@ model Attendance {
   id              String    @id @default(auto()) @map("_id") @db.ObjectId
   userId          String    @db.ObjectId
   user            User      @relation(fields: [userId], references: [id])
+  companyId       String?   @db.ObjectId
   date            DateTime  @default(now())
   checkIn         DateTime?
   checkOut        DateTime?
@@ -135,6 +159,7 @@ model Leave {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
   userId      String      @db.ObjectId
   user        User        @relation(fields: [userId], references: [id])
+  companyId   String?     @db.ObjectId
   startDate   DateTime
   endDate     DateTime
   type        String      // e.g., Sick, Casual, Annual
@@ -151,6 +176,7 @@ model Payroll {
   id              String    @id @default(auto()) @map("_id") @db.ObjectId
   userId          String    @db.ObjectId
   user            User      @relation(fields: [userId], references: [id])
+  companyId       String?   @db.ObjectId
   month           Int
   year            Int
   basicSalary     Float
@@ -215,6 +241,7 @@ model Notification {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
+  companyId String?  @db.ObjectId
   title     String
   message   String
   type      String   // INFO, WARNING, SUCCESS, ERROR
@@ -241,6 +268,7 @@ model DailyJd {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   userId         String   @db.ObjectId
   user           User     @relation(fields: [userId], references: [id])
+  companyId      String?  @db.ObjectId
   date           DateTime @default(now())
   tasksCompleted String
   tasksPending   String
@@ -329,6 +357,7 @@ model Document {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId
   userId     String    @db.ObjectId
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId  String?   @db.ObjectId
   name       String    // e.g. "Aadhaar Card", "Resume"
   type       String    // file extension or category
   url        String
@@ -344,6 +373,7 @@ model AuditLog {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   userId    String?   @db.ObjectId
   user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  companyId String?   @db.ObjectId
   action    String    // e.g. "ONBOARD_EMPLOYEE", "UPDATE_PAYROLL"
   details   String
   ip        String?
@@ -355,6 +385,7 @@ model AuditLog {
 
 model RolePermission {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String?   @db.ObjectId
   role      String    // SUPER_ADMIN, ADMIN, HR, MANAGER, EMPLOYEE
   module    String    // e.g. "EMPLOYEES", "PAYROLL", "LEAVES"
   canCreate Boolean   @default(false)
@@ -366,4 +397,3 @@ model RolePermission {
 
   @@map("role_permissions")
 }
-

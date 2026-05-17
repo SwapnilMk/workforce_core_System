@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
     const rolesParam = searchParams.get('role') ?? undefined;
     const departmentId = searchParams.get('departmentId') ?? undefined;
 
-    const where: any = {};
+    const { getTenantFilter } = require('@/lib/tenant');
+    const where: any = {
+      ...getTenantFilter(session.user),
+    };
 
     if (search) {
       where.OR = [

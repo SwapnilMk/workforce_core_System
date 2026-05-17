@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const statusParam = searchParams.get('status');
 
-    let where: any = {};
+    const { getTenantFilter } = require('@/lib/tenant');
+    let where: any = {
+      ...getTenantFilter(session.user),
+    };
     if (statusParam) {
       where.status = statusParam.toUpperCase() as LeaveStatus;
     }
@@ -31,10 +34,6 @@ export async function GET(request: NextRequest) {
         where.user = { departmentId: manager.departmentId };
       } else {
         where.userId = userId;
-      }
-    } else if (role === 'HR' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      if (companyId) {
-        where.user = { companyId };
       }
     }
 
@@ -85,6 +84,7 @@ export async function POST(request: NextRequest) {
     const leave = await prisma.leave.create({
       data: {
         userId,
+        companyId: session.user.companyId || null,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         type: type || 'Casual',
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
     await prisma.notification.create({
       data: {
         userId,
+        companyId: session.user.companyId || null,
         title: 'Leave Request Submitted',
         message: `Your ${type || 'casual'} leave request for ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()} is submitted and pending approval.`,
         type: 'INFO'

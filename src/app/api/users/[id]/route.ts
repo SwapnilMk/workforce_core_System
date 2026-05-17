@@ -7,7 +7,29 @@ export async function PUT(
   { params }: { params: Promise<any> }
 ) {
   try {
+    const { getSession } = require('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { role: requesterRole } = session.user;
+    if (requesterRole !== 'SUPER_ADMIN' && requesterRole !== 'ADMIN' && requesterRole !== 'HR') {
+      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    }
+
     const { id } = await params;
+
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, existingUser.companyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { first_name, last_name, email, role } = body;
 
@@ -50,7 +72,28 @@ export async function DELETE(
   { params }: { params: Promise<any> }
 ) {
   try {
+    const { getSession } = require('@/lib/auth');
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { role: requesterRole } = session.user;
+    if (requesterRole !== 'SUPER_ADMIN' && requesterRole !== 'ADMIN' && requesterRole !== 'HR') {
+      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
+    }
+
     const { id } = await params;
+
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, existingUser.companyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
 
     await prisma.user.delete({
       where: { id }

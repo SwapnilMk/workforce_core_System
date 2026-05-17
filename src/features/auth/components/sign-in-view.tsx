@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { InteractiveGridPattern } from './interactive-grid';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { Mail, Lock, Eye, EyeOff, Briefcase, Fingerprint, ShieldCheck, MapPin, Laptop } from 'lucide-react';
@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { loginBiometric } from '@/lib/webauthn';
+import { Capacitor } from '@capacitor/core';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
 
 export default function SignInViewPage() {
   const [email, setEmail] = useState('admin@egc.com');
@@ -24,15 +26,31 @@ export default function SignInViewPage() {
   const setUser = useAuthStore((state) => state.setUser);
   const router = useRouter();
 
-  const handleSignIn = async (e?: React.FormEvent) => {
+  // Auto-trigger system fingerprint login on native mobile if credentials are saved
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const hasSaved = localStorage.getItem('has_biometrics_saved') === 'true';
+      if (hasSaved) {
+        const timer = setTimeout(() => {
+          handleBiometricLogin();
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  const handleSignIn = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
     if (e) e.preventDefault();
     setIsLoading(true);
     
+    const targetEmail = customEmail || email;
+    const targetPassword = customPassword || password;
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, rememberDevice })
+        body: JSON.stringify({ email: targetEmail, password: targetPassword, rememberDevice })
       });
 
       const data = await response.json();
@@ -43,6 +61,25 @@ export default function SignInViewPage() {
       
       setUser(data.user);
       toast.success('Welcome back, ' + data.user.name);
+
+      // Save credentials for subsequent biometric logins on native mobile:
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const avail = await NativeBiometric.isAvailable();
+          if (avail.isAvailable) {
+            await NativeBiometric.setCredentials({
+              username: targetEmail,
+              password: targetPassword,
+              server: 'com.egc.workforce'
+            });
+            localStorage.setItem('has_biometrics_saved', 'true');
+            console.log('Biometric credentials saved successfully in secure keystore.');
+          }
+        } catch (biometricErr) {
+          console.warn('Could not save biometric credentials:', biometricErr);
+        }
+      }
+
       router.push('/dashboard/overview');
     } catch (error: any) {
       toast.error(error.message);
@@ -53,6 +90,36 @@ export default function SignInViewPage() {
 
   const handleBiometricLogin = async () => {
     setIsLoading(true);
+    
+    // NATIVE MOBILE FINGERPRINT LOGIN
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const avail = await NativeBiometric.isAvailable();
+        if (!avail.isAvailable) {
+          throw new Error('Biometric hardware is not enrolled or available on this device.');
+        }
+
+        // Get saved credentials which triggers the system biometric prompt
+        const credentials = await NativeBiometric.getCredentials({
+          server: 'com.egc.workforce'
+        });
+
+        if (credentials && credentials.username && credentials.password) {
+          toast.success('Fingerprint verified successfully! Logging you in...');
+          await handleSignIn(undefined, credentials.username, credentials.password);
+        } else {
+          throw new Error('No registered biometric credentials found. Please sign in with email and password first.');
+        }
+      } catch (error: any) {
+        console.error('Mobile biometric verification error:', error);
+        toast.error(error.message || 'Fingerprint verification failed');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // DESKTOP/BROWSER WEBAUTHN LOGIN
     try {
       const data = await loginBiometric();
       if (data.success) {
@@ -82,7 +149,7 @@ export default function SignInViewPage() {
   };
 
   return (
-    <div className='relative flex min-h-screen flex-col items-center justify-center overflow-hidden md:grid lg:max-w-none lg:grid-cols-2 lg:px-0 bg-[#020817] text-white'>
+    <div className='relative flex min-h-screen flex-col items-center justify-center overflow-y-auto md:grid lg:max-w-none lg:grid-cols-2 lg:px-0 bg-[#020817] text-white'>
       <div className='relative hidden h-full flex-col p-10 lg:flex'>
         <div className='absolute inset-0 bg-gradient-to-br from-[#0f172a] to-[#020617]' />
         <div className='relative z-20 flex items-center text-xl font-bold tracking-tight'>
@@ -131,17 +198,25 @@ export default function SignInViewPage() {
         </div>
       </div>
       
-      <div className='flex h-full items-center justify-center p-4 lg:p-8 bg-black/20'>
+      <div className='flex min-h-screen lg:min-h-full w-full items-center justify-center p-4 sm:p-6 lg:p-8 bg-black/20 overflow-y-auto py-8 sm:py-12'>
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className='flex w-full max-w-md flex-col space-y-8'
+          className='flex w-full max-w-md flex-col space-y-6 md:space-y-8'
         >
+          {/* Mobile Logo / Brand Header */}
+          <div className='flex items-center justify-center lg:hidden mb-2'>
+            <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary ring-1 ring-primary/50">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-bold tracking-tight text-white uppercase tracking-wider">EGC Workforce Core</span>
+          </div>
+
           <div className='flex flex-col space-y-2 text-center'>
-            <h1 className='text-3xl font-bold tracking-tight text-white'>
+            <h1 className='text-2xl sm:text-3xl font-black tracking-tight text-white uppercase italic'>
               Access System
             </h1>
-            <p className='text-gray-400 text-sm'>
+            <p className='text-gray-400 text-xs sm:text-sm font-medium'>
               Sign in with your secure organizational identity
             </p>
           </div>
@@ -253,15 +328,6 @@ export default function SignInViewPage() {
           </div>
 
           <div className="flex flex-col space-y-4 text-center">
-            <p className='text-gray-500 text-sm'>
-              New employee?{' '}
-              <Link
-                href='/auth/signup'
-                className='text-primary hover:underline underline-offset-4 font-bold'
-              >
-                Complete Onboarding
-              </Link>
-            </p>
             <div className="flex items-center justify-center gap-4 text-[11px] text-gray-600">
               <div className="flex items-center gap-1">
                 <Laptop className="w-3 h-3" />

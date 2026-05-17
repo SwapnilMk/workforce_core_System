@@ -30,6 +30,11 @@ export async function GET(
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, employee.companyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
+
     return NextResponse.json({
       success: true,
       employee
@@ -56,6 +61,17 @@ export async function PUT(
     }
 
     const { id } = await params;
+
+    const existingEmployee = await prisma.user.findUnique({ where: { id } });
+    if (!existingEmployee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, existingEmployee.companyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const {
@@ -297,6 +313,16 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    const existingEmployee = await prisma.user.findUnique({ where: { id } });
+    if (!existingEmployee) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    const { validateCompanyAccess } = require('@/lib/tenant');
+    if (!validateCompanyAccess(session.user, existingEmployee.companyId)) {
+      return NextResponse.json({ error: 'Access denied: Tenant mismatch' }, { status: 403 });
+    }
 
     // Sequential transaction delete
     await prisma.$transaction(async (tx) => {

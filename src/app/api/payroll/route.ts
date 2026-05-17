@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month') ? Number(searchParams.get('month')) : undefined;
     const year = searchParams.get('year') ? Number(searchParams.get('year')) : undefined;
 
-    let where: any = {};
+    const { getTenantFilter } = require('@/lib/tenant');
+    let where: any = {
+      ...getTenantFilter(session.user),
+    };
     if (month) where.month = month;
     if (year) where.year = year;
 
@@ -30,10 +33,6 @@ export async function GET(request: NextRequest) {
         where.user = { departmentId: manager.departmentId };
       } else {
         where.userId = userId;
-      }
-    } else if (role === 'HR' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      if (companyId) {
-        where.user = { companyId };
       }
     }
 
@@ -81,9 +80,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch all active employees in this company
+    const { getTenantFilter } = require('@/lib/tenant');
     const employees = await prisma.user.findMany({
       where: {
-        companyId,
+        ...getTenantFilter(session.user),
         role: { not: 'SUPER_ADMIN' } // skip Super Admin
       }
     });
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       const payroll = await prisma.payroll.create({
         data: {
           userId: emp.id,
+          companyId: emp.companyId,
           month,
           year,
           basicSalary: basic,
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
       await prisma.notification.create({
         data: {
           userId: emp.id,
+          companyId: emp.companyId,
           title: `Payslip Generated (${month}/${year})`,
           message: `Your salary slip for ${month}/${year} has been generated. Net Salary: INR ${netSalary.toLocaleString()}. Status: PENDING.`,
           type: 'INFO'
