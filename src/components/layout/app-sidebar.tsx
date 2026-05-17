@@ -44,6 +44,35 @@ export default function AppSidebar() {
   const router = useRouter();
   const filteredGroups = useFilteredNavGroups(navGroups);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const [unreadMessages, setUnreadMessages] = React.useState(0);
+  const [unreadNotifications, setUnreadNotifications] = React.useState(0);
+
+  const fetchUnreadCounts = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/chat/unread');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setUnreadMessages(data.unreadMessages);
+          setUnreadNotifications(data.unreadNotifications);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load sidebar unread counts:', err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      fetchUnreadCounts();
+      const interval = setInterval(fetchUnreadCounts, 5000);
+      window.addEventListener('egc_poll_chat', fetchUnreadCounts);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('egc_poll_chat', fetchUnreadCounts);
+      };
+    }
+  }, [user, fetchUnreadCounts]);
 
   const handleLogout = async () => {
     try {
@@ -108,9 +137,21 @@ export default function AppSidebar() {
                         tooltip={item.title}
                         isActive={pathname === item.url}
                       >
-                        <Link href={item.url}>
-                          <Icon />
-                          <span>{item.title}</span>
+                        <Link href={item.url} className='flex w-full items-center justify-between'>
+                          <div className='flex items-center gap-2'>
+                            <Icon />
+                            <span>{item.title}</span>
+                          </div>
+                          {item.title === 'Chat' && unreadMessages > 0 && (
+                            <span className='bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1'>
+                              {unreadMessages}
+                            </span>
+                          )}
+                          {item.title === 'Notifications' && unreadNotifications > 0 && (
+                            <span className='bg-destructive text-destructive-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1'>
+                              {unreadNotifications}
+                            </span>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

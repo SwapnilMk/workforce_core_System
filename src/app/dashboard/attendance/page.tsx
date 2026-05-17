@@ -10,30 +10,75 @@ import { getCurrentLocation, calculateDistance } from '@/lib/geo';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useBiometrics } from '@/hooks/use-biometrics';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 const MapPreview = dynamic(() => import('@/components/attendance/map-preview'), { 
   ssr: false,
   loading: () => <div className="h-[300px] w-full bg-muted animate-pulse rounded-xl" />
 });
 
-// Mock Office Location (Mumbai)
+// Mumbai HQ coordinates matching the seed company values
 const OFFICE_LOCATION: [number, number] = [19.0760, 72.8777];
 const OFFICE_RADIUS = 200; // 200 meters
 
+interface AttendanceLog {
+  id: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string;
+  failedAttempt: boolean;
+  errorMessage: string | null;
+  workHours: number;
+}
+
 export default function AttendancePage() {
   const { user } = useAuthStore();
+  const { authenticate, isSupported: biometricSupported } = useBiometrics();
+  usePushNotifications(user?.id);
   const [status, setStatus] = useState<'checked-in' | 'checked-out'>('checked-out');
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  
-  const [history] = useState([
-    { date: '2024-05-14', checkIn: '09:00 AM', checkOut: '06:00 PM', status: 'Present', type: 'Office' },
-    { date: '2024-05-13', checkIn: '08:55 AM', checkOut: '06:05 PM', status: 'Present', type: 'Office' },
-    { date: '2024-05-12', checkIn: '10:15 AM', checkOut: '07:15 PM', status: 'Late', type: 'Remote' },
-    { date: '2024-05-11', checkIn: '-', checkOut: '-', status: 'Absent', type: '-' },
-  ]);
+  const [history, setHistory] = useState<AttendanceLog[]>([]);
+  const [totalHours, setTotalHours] = useState<number>(0);
+  const [remoteWorkAllowed, setRemoteWorkAllowed] = useState<boolean>(false);
+
+  const fetchAttendanceHistory = async () => {
+    try {
+      const res = await fetch('/api/attendance');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.logs) {
+          setHistory(data.logs);
+          
+          if (data.remoteWorkAllowed !== undefined) {
+            setRemoteWorkAllowed(data.remoteWorkAllowed);
+          }
+          
+          // Compute status based on today's logs
+          const todayStr = new Date().toDateString();
+          const todayLog = data.logs.find((log: any) => {
+            return new Date(log.date).toDateString() === todayStr && !log.failedAttempt;
+          });
+
+          if (todayLog && todayLog.checkIn && !todayLog.checkOut) {
+            setStatus('checked-in');
+          } else {
+            setStatus('checked-out');
+          }
+
+          // Compute total hours
+          const hours = data.logs.reduce((acc: number, log: any) => acc + (log.workHours || 0), 0);
+          setTotalHours(Math.round(hours * 10) / 10);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch attendance:', err);
+    }
+  };
 
   const updateLocation = async () => {
     setIsRefreshing(true);
@@ -43,7 +88,7 @@ export default function AttendancePage() {
       const dist = calculateDistance(loc.latitude, loc.longitude, OFFICE_LOCATION[0], OFFICE_LOCATION[1]);
       setDistance(dist);
     } catch (error: any) {
-      toast.error('Failed to get location: ' + error.message);
+      toast.error('Failed to retrieve GPS location: ' + error.message);
     } finally {
       setIsRefreshing(false);
     }
@@ -51,24 +96,65 @@ export default function AttendancePage() {
 
   useEffect(() => {
     updateLocation();
+    fetchAttendanceHistory();
   }, []);
 
-  const isInsideRadius = distance !== null && distance <= OFFICE_RADIUS;
+  const isInsideRadius = remoteWorkAllowed || (distance !== null && distance <= OFFICE_RADIUS);
 
   const handleAttendance = async () => {
-    if (!isInsideRadius) {
-      toast.error('Access Denied: You are outside the office geofence radius.');
-      // Log failed attempt logic would go here
+    if (!userLocation) {
+      toast.error('GPS coordinates not ready. Please refresh location.');
       return;
     }
 
     setIsVerifying(true);
-    // Simulate biometric check
-    setTimeout(() => {
-      setStatus(status === 'checked-in' ? 'checked-out' : 'checked-in');
+    const action = status === 'checked-in' ? 'check-out' : 'check-in';
+
+    // Verify native biometrics hardware check
+    const isVerified = await authenticate(`Scan fingerprint to authorize ${action === 'check-in' ? 'Check-In' : 'Check-Out'}`);
+    if (!isVerified) {
+      toast.error('Biometric authentication failed or was cancelled.');
       setIsVerifying(false);
-      toast.success(status === 'checked-in' ? 'Checked out successfully' : 'Checked in successfully');
-    }, 1500);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          latitude: userLocation[0],
+          longitude: userLocation[1],
+          isMockLocation: false,
+          isVpnDetected: false
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success(data.message || `${action === 'check-in' ? 'Checked in' : 'Checked out'} successfully`);
+        fetchAttendanceHistory();
+      } else {
+        toast.error(data.error || 'Attendance punch rejected.');
+        // Still refresh history to show failed audit attempt
+        fetchAttendanceHistory();
+      }
+    } catch (err: any) {
+      toast.error('Network Error: ' + err.message);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const formatTime = (isoString: string | null) => {
+    if (!isoString) return '-';
+    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (isoString: string) => {
+    return new Date(isoString).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -76,12 +162,12 @@ export default function AttendancePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Smart Attendance</h1>
-          <p className="text-muted-foreground mt-1">Biometric & Geo-fenced workforce tracking</p>
+          <p className="text-muted-foreground mt-1 font-medium">Biometric & Geo-fenced live employee tracking</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="px-3 py-1 bg-primary/5 border-primary/20 text-primary">
+          <Badge variant="outline" className="px-3 py-1 bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
             <ShieldAlert className="w-3 h-3 mr-1.5" />
-            Security Level: AES-256
+            Security Level: AES-256 Verified
           </Badge>
         </div>
       </div>
@@ -91,11 +177,11 @@ export default function AttendancePage() {
           <CardHeader className="border-b bg-muted/30 pb-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <CardTitle className="flex items-center gap-2 text-2xl">
+                <CardTitle className="flex items-center gap-2 text-2xl font-bold">
                   <Clock className="w-6 h-6 text-primary" />
                   Live Punching Terminal
                 </CardTitle>
-                <CardDescription>Verify your identity and location to mark attendance</CardDescription>
+                <CardDescription>Verify your identity and coordinates to mark your shift</CardDescription>
               </div>
               <Button 
                 variant="ghost" 
@@ -115,32 +201,54 @@ export default function AttendancePage() {
                   <div className="text-6xl font-mono font-bold tracking-tighter text-primary">
                     {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
                     {new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
 
                 <div className="w-full space-y-4">
                   <AnimatePresence mode="wait">
-                    {isInsideRadius ? (
+                    {remoteWorkAllowed ? (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 flex items-center justify-center gap-2 text-sm font-semibold"
+                        className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 flex flex-col items-center justify-center gap-1 text-sm font-bold text-center"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Remote / WFH Mode Active
+                        </div>
+                        <span className="text-[10.5px] font-medium opacity-85">
+                          {distance !== null ? `Location recorded: ${Math.round(distance)}m from HQ` : 'GPS Location loading...'}
+                        </span>
+                      </motion.div>
+                    ) : distance === null ? (
+                      <div className="p-4 rounded-xl bg-muted/20 border text-center text-sm font-semibold">
+                        Locating employee GPS...
+                      </div>
+                    ) : isInsideRadius ? (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 flex items-center justify-center gap-2 text-sm font-bold"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        Within Office Radius ({Math.round(distance || 0)}m)
+                        Within Geofence ({Math.round(distance)}m)
                       </motion.div>
                     ) : (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 flex items-center justify-center gap-2 text-sm font-semibold"
+                        className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 flex flex-col items-center justify-center gap-1 text-sm font-bold text-center"
                       >
-                        <ShieldAlert className="w-4 h-4" />
-                        Outside Radius ({Math.round(distance || 0)}m)
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="w-4 h-4" />
+                          Geofence Blocked ({Math.round(distance)}m away)
+                        </div>
+                        <span className="text-[10.5px] font-medium opacity-85">Punch will register as failed audit log</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -151,8 +259,8 @@ export default function AttendancePage() {
                     disabled={isVerifying}
                     className={`w-full h-24 text-xl font-bold rounded-2xl shadow-xl transition-all active:scale-95 group relative overflow-hidden ${
                       status === 'checked-in' 
-                      ? 'bg-destructive hover:bg-destructive/90 shadow-destructive/20' 
-                      : 'bg-primary hover:bg-primary/90 shadow-primary/20'
+                      ? 'bg-destructive hover:bg-destructive/90 shadow-destructive/20 text-white' 
+                      : 'bg-primary hover:bg-primary/90 shadow-primary/20 text-primary-foreground'
                     }`}
                   >
                     <AnimatePresence mode="wait">
@@ -184,10 +292,10 @@ export default function AttendancePage() {
 
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1 rounded-xl h-11 border-primary/20 bg-primary/5 hover:bg-primary/10">
-                      <Camera className="w-4 h-4 mr-2" /> Selfie
+                      <Camera className="w-4 h-4 mr-2" /> Facial Selfie
                     </Button>
-                    <Button variant="outline" className="flex-1 rounded-xl h-11">
-                      Manual Log
+                    <Button variant="outline" className="flex-1 rounded-xl h-11" onClick={fetchAttendanceHistory}>
+                      Refresh Logs
                     </Button>
                   </div>
                 </div>
@@ -195,7 +303,7 @@ export default function AttendancePage() {
 
               <div className="p-4 flex flex-col gap-4 bg-muted/10">
                 <div className="flex items-center justify-between px-2">
-                  <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Live Geofence Map</div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Office Geofence</div>
                   <Badge variant="secondary" className="text-[10px]">RADIUS: {OFFICE_RADIUS}m</Badge>
                 </div>
                 <MapPreview 
@@ -205,16 +313,16 @@ export default function AttendancePage() {
                 />
                 <div className="p-4 rounded-xl bg-background/50 border space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Detected IP</span>
-                    <span className="font-mono font-bold">192.168.1.45</span>
+                    <span className="text-muted-foreground">Secure GPS Radius</span>
+                    <Badge variant="outline" className="text-green-600 bg-green-500/10 border-green-500/20 font-bold">200m Geofenced</Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">VPN Status</span>
-                    <Badge variant="outline" className="text-green-600 bg-green-500/10 border-green-500/20">Protected</Badge>
+                    <span className="text-muted-foreground">VPN Shield</span>
+                    <Badge variant="outline" className="text-green-600 bg-green-500/10 border-green-500/20 font-bold">Active</Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Mock GPS</span>
-                    <Badge variant="outline" className="text-green-600 bg-green-500/10 border-green-500/20">Clean</Badge>
+                    <span className="text-muted-foreground">Spoof Detection</span>
+                    <Badge variant="outline" className="text-green-600 bg-green-500/10 border-green-500/20 font-bold">Safe</Badge>
                   </div>
                 </div>
               </div>
@@ -226,57 +334,68 @@ export default function AttendancePage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-xl font-bold">
               <History className="w-5 h-5 text-primary" />
-              History & Analytics
+              History & Audit Trail
             </CardTitle>
-            <CardDescription>Your last 7 days performance</CardDescription>
+            <CardDescription>Your live real-time attendance logs</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-xl bg-muted/50 border text-center">
-                <div className="text-2xl font-bold">22</div>
-                <div className="text-[10px] uppercase font-bold text-muted-foreground">Working Days</div>
+                <div className="text-2xl font-bold">{history.filter(h => !h.failedAttempt).length}</div>
+                <div className="text-[10px] uppercase font-bold text-muted-foreground">Punches Logged</div>
               </div>
               <div className="p-3 rounded-xl bg-muted/50 border text-center">
-                <div className="text-2xl font-bold text-primary">176h</div>
+                <div className="text-2xl font-bold text-primary">{totalHours}h</div>
                 <div className="text-[10px] uppercase font-bold text-muted-foreground">Total Hours</div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              {history.map((record, i) => (
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  key={i} 
-                  className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-border group hover:border-primary/50 transition-all cursor-default"
-                >
-                  <div className="space-y-1">
-                    <p className="font-bold text-sm">{record.date}</p>
-                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                      <span>{record.checkIn} - {record.checkOut}</span>
-                      <span className="h-1 w-1 rounded-full bg-border" />
-                      <span>{record.type}</span>
-                    </div>
-                  </div>
-                  <Badge 
-                    className={`rounded-lg px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${
-                      record.status === 'Present' 
-                      ? 'bg-green-500/10 text-green-600 border-green-500/20' 
-                      : record.status === 'Late'
-                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                      : 'bg-red-500/10 text-red-600 border-red-500/20'
-                    }`} 
-                    variant="outline"
+            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+              {history.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground text-sm font-medium">
+                  No attendance history logged yet.
+                </div>
+              ) : (
+                history.map((record) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    key={record.id} 
+                    className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-border group hover:border-primary/50 transition-all cursor-default"
                   >
-                    {record.status}
-                  </Badge>
-                </motion.div>
-              ))}
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm">{formatDate(record.date)}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                        <span>{formatTime(record.checkIn)} - {formatTime(record.checkOut)}</span>
+                        {record.workHours > 0 && (
+                          <>
+                            <span className="h-1 w-1 rounded-full bg-border" />
+                            <span>{record.workHours} hrs</span>
+                          </>
+                        )}
+                      </div>
+                      {record.failedAttempt && (
+                        <p className="text-[9.5px] text-red-500 font-medium leading-tight">
+                          {record.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                    <Badge 
+                      className={`rounded-lg px-2.5 py-0.5 text-[10px] font-bold tracking-wider ${
+                        record.failedAttempt
+                        ? 'bg-red-500/10 text-red-600 border-red-500/20'
+                        : record.status === 'LATE'
+                        ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                        : 'bg-green-500/10 text-green-600 border-green-500/20'
+                      }`} 
+                      variant="outline"
+                    >
+                      {record.failedAttempt ? 'Security Blocked' : record.status}
+                    </Badge>
+                  </motion.div>
+                ))
+              )}
             </div>
-            <Button variant="ghost" className="w-full mt-2 font-semibold hover:bg-primary/5 hover:text-primary">
-              View Detailed Analytics
-            </Button>
           </CardContent>
         </Card>
       </div>

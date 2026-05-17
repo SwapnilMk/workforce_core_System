@@ -8,6 +8,10 @@ import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { getSortingStateParser } from '@/lib/parsers';
 import { usersQueryOptions } from '../../api/queries';
 import { columns } from './columns';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+import { Icons } from '@/components/icons';
 
 const columnIds = columns.map((c) => c.id).filter(Boolean) as string[];
 
@@ -45,7 +49,15 @@ export function UsersTable() {
 
   return (
     <DataTable table={table}>
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table}>
+        <Link
+          href='/dashboard/employees/new'
+          className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'h-8 text-xs font-bold gap-1.5 shadow-sm')}
+        >
+          <Icons.add className='h-3.5 w-3.5' />
+          Onboard Staff (Wizard)
+        </Link>
+      </DataTableToolbar>
     </DataTable>
   );
 }

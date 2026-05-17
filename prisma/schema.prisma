@@ -70,6 +70,7 @@ model User {
   company         Company?  @relation(fields: [companyId], references: [id])
   departmentId    String?   @db.ObjectId
   department      Department? @relation(fields: [departmentId], references: [id])
+  profilePicture  String?
   
   // Salary Structure
   basicSalary     Float     @default(0)
@@ -83,16 +84,27 @@ model User {
   // Settings
   biometricEnabled Boolean  @default(false)
   faceIdEnabled    Boolean  @default(false)
+  pushToken        String?
   
-  attendances     Attendance[]
-  leaves          Leave[]
-  payrolls        Payroll[]
-  authenticators  Authenticator[]
-  loginHistory    LoginHistory[]
-  notifications   Notification[]
+  attendances       Attendance[]
+  leaves            Leave[]
+  payrolls          Payroll[]
+  authenticators    Authenticator[]
+  loginHistory      LoginHistory[]
+  notifications     Notification[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]     @relation("ReceivedMessages")
+  dailyJds          DailyJd[]
   
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  // Onboarding relations
+  employeeProfile   EmployeeProfile?
+  payrollProfile    PayrollProfile?
+  attendanceProfile AttendanceProfile?
+  documents         Document[]
+  auditLogs         AuditLog[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@map("users")
 }
@@ -211,3 +223,147 @@ model Notification {
 
   @@map("notifications")
 }
+
+model Message {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  senderId   String   @db.ObjectId
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String?  @db.ObjectId
+  receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content    String
+  createdAt  DateTime @default(now())
+  isRead     Boolean  @default(false)
+
+  @@map("messages")
+}
+
+model DailyJd {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  user           User     @relation(fields: [userId], references: [id])
+  date           DateTime @default(now())
+  tasksCompleted String
+  tasksPending   String
+  hoursWorked    Float
+  remarks        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("daily_jds")
+}
+
+model EmployeeProfile {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId                 String    @unique @db.ObjectId
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId             String    @unique
+  gender                 String
+  dateOfBirth            DateTime
+  mobileNumber           String
+  alternatePhone         String?
+  joiningDate            DateTime
+  workLocation           String
+  currentAddress         String
+  permanentAddress       String
+  bloodGroup             String
+  emergencyContactName   String
+  emergencyContactNumber String
+  relationship           String
+  maritalStatus          String
+  nationality            String
+  skills                 String[]  @default([])
+  certifications         String[]  @default([])
+  linkedin               String?
+  github                 String?
+  portfolio              String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@map("employee_profiles")
+}
+
+model PayrollProfile {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String    @unique @db.ObjectId
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeCode        String    @unique
+  panNumber           String
+  aadhaarNumber       String
+  uanNumber           String?
+  pfNumber            String?
+  esiNumber           String?
+  bankName            String
+  accountNumber       String
+  ifscCode            String
+  salaryStructure     String    @default("Standard")
+  basicSalary         Float
+  hra                 Float
+  allowances          Float
+  bonusEligibility    Boolean   @default(false)
+  taxRegime           String    @default("NEW") // OLD, NEW
+  overtimeRate        Float     @default(0)
+  paymentFrequency    String    @default("MONTHLY") // MONTHLY, WEEKLY
+  salaryEffectiveDate DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@map("payroll_profiles")
+}
+
+model AttendanceProfile {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String    @unique @db.ObjectId
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedOffice    String    @default("MumbaiHQ")
+  shiftTiming       String    @default("09:00 - 18:00")
+  weeklyOffs        String[]  @default(["Sunday"])
+  overtimeEligible  Boolean   @default(false)
+  remoteWorkAllowed Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("attendance_profiles")
+}
+
+model Document {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    // e.g. "Aadhaar Card", "Resume"
+  type       String    // file extension or category
+  url        String
+  size       Int
+  uploadedAt DateTime  @default(now())
+  expiryDate DateTime?
+  status     String    @default("VERIFIED") // PENDING, VERIFIED, EXPIRED
+
+  @@map("documents")
+}
+
+model AuditLog {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?   @db.ObjectId
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String    // e.g. "ONBOARD_EMPLOYEE", "UPDATE_PAYROLL"
+  details   String
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  @@map("audit_logs")
+}
+
+model RolePermission {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  role      String    // SUPER_ADMIN, ADMIN, HR, MANAGER, EMPLOYEE
+  module    String    // e.g. "EMPLOYEES", "PAYROLL", "LEAVES"
+  canCreate Boolean   @default(false)
+  canRead   Boolean   @default(false)
+  canUpdate Boolean   @default(false)
+  canDelete Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("role_permissions")
+}
+

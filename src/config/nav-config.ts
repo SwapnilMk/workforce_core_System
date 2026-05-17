@@ -76,6 +76,22 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
+        title: 'Daily Work Logs',
+        url: '/dashboard/jd',
+        icon: 'calendar',
+        shortcut: ['j', 'd'],
+        isActive: false,
+        items: []
+      },
+      {
+        title: 'Chat',
+        url: '/dashboard/chat',
+        icon: 'chat',
+        shortcut: ['c', 'h'],
+        isActive: false,
+        items: []
+      },
+      {
         title: 'Announcements',
         url: '/dashboard/announcements',
         icon: 'notification',
