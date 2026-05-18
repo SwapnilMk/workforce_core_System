@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
       else if (user.role === UserRole.MANAGER) displayRole = 'Manager';
       else if (user.role === UserRole.ADMIN) displayRole = 'Admin';
       
+      const { decryptPassword } = require('@/lib/crypto-password');
       return {
         id: idx + offset + 1, // numeric id for frontend compatibility
         dbId: user.id, // actual Mongo ObjectId
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
         phone: '+91 98765 43210', 
         role: displayRole,
         status: 'Active',
+        password: decryptPassword(user.password),
         created_at: user.createdAt.toISOString(),
         updated_at: user.updatedAt.toISOString(),
       };
@@ -114,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { first_name, last_name, email, role, phone, companyId } = body;
+    const { first_name, last_name, email, role, phone, companyId, password } = body;
 
     let dbRole: UserRole = UserRole.EMPLOYEE;
     const rUpper = (role || '').toUpperCase().replace(' ', '_');
@@ -124,13 +126,15 @@ export async function POST(request: NextRequest) {
     else if (rUpper === 'ADMIN') dbRole = UserRole.ADMIN;
 
     // Create a new user with standard password
-    const hashedPassword = await bcrypt.hash('employee123', 10);
+    const { encryptPassword } = require('@/lib/crypto-password');
+    const passwordToUse = password || 'employee123';
+    const encryptedPassword = encryptPassword(passwordToUse);
 
     const newUser = await prisma.user.create({
       data: {
         name: `${first_name} ${last_name}`,
         email,
-        password: hashedPassword,
+        password: encryptedPassword,
         role: dbRole,
         companyId: (session.user.role === 'SUPER_ADMIN' ? companyId : session.user.companyId) || null,
         biometricEnabled: false,

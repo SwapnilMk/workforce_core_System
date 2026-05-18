@@ -75,7 +75,7 @@ export function useWebSocket(url: string): WebSocketHook {
   const startPollingFallback = () => {
     if (pollingIntervalRef.current) return;
     
-    // Simulate real-time by trigger polling updates every 1.5 seconds
+    // Simulate real-time by trigger polling updates every 8 seconds (gentle rest fallback)
     pollingIntervalRef.current = setInterval(() => {
       // Trigger a custom event to notify listeners they should query REST endpoints
       if (typeof window !== 'undefined') {
@@ -83,7 +83,7 @@ export function useWebSocket(url: string): WebSocketHook {
         window.dispatchEvent(pollEvent);
       }
       setIsConnected(true); // Treat polling mode as connected for UI convenience
-    }, 1500);
+    }, 8000);
   };
 
   useEffect(() => {

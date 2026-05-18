@@ -6,6 +6,7 @@ export type User = {
   phone: string;
   status: string;
   role: string;
+  password?: string;
   created_at: string;
   updated_at: string;
 };
@@ -35,4 +36,5 @@ export type UserMutationPayload = {
   phone: string;
   role: string;
   status: string;
+  password?: string;
 };

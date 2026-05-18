@@ -66,11 +66,9 @@ export default function AppSidebar() {
   React.useEffect(() => {
     if (user) {
       fetchUnreadCounts();
-      const interval = setInterval(fetchUnreadCounts, 5000);
-      window.addEventListener('egc_poll_chat', fetchUnreadCounts);
+      const interval = setInterval(fetchUnreadCounts, 15000); // Gentle 15s interval for sidebar badge count syncing
       return () => {
         clearInterval(interval);
-        window.removeEventListener('egc_poll_chat', fetchUnreadCounts);
       };
     }
   }, [user, fetchUnreadCounts]);
@@ -110,10 +108,16 @@ export default function AppSidebar() {
                     >
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title} isActive={pathname === item.url}>
-                            {item.icon && <Icon />}
-                            <span>{item.title}</span>
-                            <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+                          <SidebarMenuButton 
+                            tooltip={item.title} 
+                            isActive={pathname === item.url}
+                            className="group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
+                          >
+                            {item.icon && (
+                              <Icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                            )}
+                            <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
+                            <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden' />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
@@ -137,19 +141,20 @@ export default function AppSidebar() {
                         asChild
                         tooltip={item.title}
                         isActive={pathname === item.url}
+                        className="group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center"
                       >
-                        <Link href={item.url} className='flex w-full items-center justify-between'>
-                          <div className='flex items-center gap-2'>
-                            <Icon />
-                            <span>{item.title}</span>
+                        <Link href={item.url} className='flex w-full items-center justify-between group-data-[collapsible=icon]:justify-center'>
+                          <div className='flex items-center gap-2 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
+                            <Icon className="size-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                            <span className='group-data-[collapsible=icon]:hidden'>{item.title}</span>
                           </div>
                           {item.title === 'Chat' && unreadMessages > 0 && (
-                            <span className='bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1'>
+                            <span className='bg-primary text-primary-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1 group-data-[collapsible=icon]:hidden'>
                               {unreadMessages}
                             </span>
                           )}
                           {item.title === 'Notifications' && unreadNotifications > 0 && (
-                            <span className='bg-destructive text-destructive-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1'>
+                            <span className='bg-destructive text-destructive-foreground flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[9px] font-extrabold shadow-sm shrink-0 ml-auto mr-1 group-data-[collapsible=icon]:hidden'>
                               {unreadNotifications}
                             </span>
                           )}
@@ -173,14 +178,14 @@ export default function AppSidebar() {
                   >
                     {user && (
                       <div className="flex items-center gap-2">
-                        <UserAvatarProfile className='h-8 w-8 rounded-lg' showInfo={false} user={user} />
-                        <div className="grid flex-1 text-left text-sm leading-tight">
+                        <UserAvatarProfile className='h-8 w-8 rounded-lg shrink-0' showInfo={false} user={user} />
+                        <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                           <span className="truncate font-semibold">{user.name}</span>
                           <span className="truncate text-xs">{user.email}</span>
                         </div>
                       </div>
                     )}
-                    <Icons.chevronsDown className='ml-auto size-4' />
+                    <Icons.chevronsDown className='ml-auto size-4 group-data-[collapsible=icon]:hidden' />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

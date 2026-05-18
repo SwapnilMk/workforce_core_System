@@ -258,11 +258,24 @@ model Message {
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiverId String?  @db.ObjectId
   receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  channelId  String?  @db.ObjectId
   content    String
   createdAt  DateTime @default(now())
   isRead     Boolean  @default(false)
 
   @@map("messages")
+}
+
+model Channel {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  isPrivate   Boolean  @default(false)
+  memberIds   String[] @db.ObjectId
+  creatorId   String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("channels")
 }
 
 model DailyJd {

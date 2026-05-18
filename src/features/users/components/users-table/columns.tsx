@@ -35,6 +35,18 @@ export const columns: ColumnDef<User>[] = [
     header: 'PHONE'
   },
   {
+    accessorKey: 'password',
+    header: 'PASSWORD',
+    cell: ({ cell }) => {
+      const password = cell.getValue<string>();
+      return (
+        <span className='font-mono bg-muted px-2 py-1 rounded text-xs select-all text-destructive font-semibold'>
+          {password}
+        </span>
+      );
+    }
+  },
+  {
     id: 'role',
     accessorKey: 'role',
     enableSorting: false,

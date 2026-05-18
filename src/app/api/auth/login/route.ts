@@ -25,7 +25,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    let isPasswordValid = false;
+    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } else {
+      const { decryptPassword } = require('@/lib/crypto-password');
+      isPasswordValid = decryptPassword(user.password) === password;
+    }
 
     if (!isPasswordValid) {
       // Log failed attempt

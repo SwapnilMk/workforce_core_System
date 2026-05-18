@@ -16,10 +16,13 @@ import { toast } from 'sonner';
 import { loginBiometric } from '@/lib/webauthn';
 import { Capacitor } from '@capacitor/core';
 import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { ThemeSelector } from '@/components/themes/theme-selector';
+import { ThemeModeToggle } from '@/components/themes/theme-mode-toggle';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export default function SignInViewPage() {
   const [email, setEmail] = useState('admin@egc.com');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('superadmin123');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
@@ -136,23 +139,21 @@ export default function SignInViewPage() {
     }
   };
 
-  const setDemoAccount = (role: string) => {
-    const emailMap: Record<string, string> = {
-      'Super Admin': 'admin@egc.com',
-      'HR': 'hr@egc.com',
-      'Manager': 'manager@egc.com',
-      'Employee': 'employee@egc.com',
-    };
-    setEmail(emailMap[role]);
-    setPassword(role.toLowerCase().replace(' ', '') + '123');
-    toast.info(`Demo credentials set for ${role}`);
-  };
-
   return (
-    <div className='relative flex min-h-screen flex-col items-center justify-center overflow-y-auto md:grid lg:max-w-none lg:grid-cols-2 lg:px-0 bg-[#020817] text-white'>
+    <div className='relative flex min-h-screen flex-col items-center justify-center overflow-y-auto lg:overflow-hidden md:grid lg:max-w-none lg:grid-cols-2 lg:px-0 bg-background text-foreground transition-colors duration-300 lg:h-screen'>
+      {/* Theme Toggles */}
+      <div className='absolute right-4 top-4 z-50 flex items-center gap-2 bg-background/80 p-2 rounded-xl border border-border backdrop-blur-md shadow-lg'>
+        <TooltipProvider delayDuration={0}>
+          <ThemeModeToggle />
+          <div className='hidden sm:block'>
+            <ThemeSelector />
+          </div>
+        </TooltipProvider>
+      </div>
+
       <div className='relative hidden h-full flex-col p-10 lg:flex'>
         <div className='absolute inset-0 bg-gradient-to-br from-[#0f172a] to-[#020617]' />
-        <div className='relative z-20 flex items-center text-xl font-bold tracking-tight'>
+        <div className='relative z-20 flex items-center text-xl font-bold tracking-tight text-white'>
           <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary ring-1 ring-primary/50">
             <Briefcase className="h-6 w-6" />
           </div>
@@ -170,7 +171,7 @@ export default function SignInViewPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm"
+            className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-white"
           >
             <ShieldCheck className="w-8 h-8 text-primary mb-3" />
             <h3 className="font-semibold mb-1">Secure Auth</h3>
@@ -180,7 +181,7 @@ export default function SignInViewPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm"
+            className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm text-white"
           >
             <MapPin className="w-8 h-8 text-primary mb-3" />
             <h3 className="font-semibold mb-1">Geo-Fence</h3>
@@ -198,7 +199,7 @@ export default function SignInViewPage() {
         </div>
       </div>
       
-      <div className='flex min-h-screen lg:min-h-full w-full items-center justify-center p-4 sm:p-6 lg:p-8 bg-black/20 overflow-y-auto py-8 sm:py-12'>
+      <div className='flex min-h-screen lg:h-screen w-full items-center justify-center p-4 sm:p-6 lg:p-8 bg-card/20 border-l border-border/10 overflow-y-auto lg:overflow-hidden py-8 sm:py-12'>
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -209,49 +210,49 @@ export default function SignInViewPage() {
             <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 text-primary ring-1 ring-primary/50">
               <Briefcase className="h-5 w-5" />
             </div>
-            <span className="text-sm font-bold tracking-tight text-white uppercase tracking-wider">EGC Workforce Core</span>
+            <span className="text-sm font-bold tracking-tight text-foreground uppercase tracking-wider">EGC Workforce Core</span>
           </div>
 
           <div className='flex flex-col space-y-2 text-center'>
-            <h1 className='text-2xl sm:text-3xl font-black tracking-tight text-white uppercase italic'>
+            <h1 className='text-2xl sm:text-3xl font-black tracking-tight text-foreground uppercase italic'>
               Access System
             </h1>
-            <p className='text-gray-400 text-xs sm:text-sm font-medium'>
+            <p className='text-muted-foreground text-xs sm:text-sm font-medium'>
               Sign in with your secure organizational identity
             </p>
           </div>
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Email Address</Label>
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</Label>
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                   type="email" 
                   placeholder="name@company.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:ring-primary/50 focus:border-primary transition-all rounded-xl"
+                  className="pl-10 h-12 bg-card border-border text-foreground placeholder:text-muted-foreground focus:ring-primary/30 focus:border-primary transition-all rounded-xl"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Password</Label>
-                <Link href="#" className="text-xs text-primary hover:underline">Forgot password?</Link>
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Password</Label>
+                <Link href="/auth/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
               </div>
               <div className="relative group">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-primary transition-colors" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input 
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:ring-primary/50 focus:border-primary transition-all rounded-xl"
+                  className="pl-10 h-12 bg-card border-border text-foreground placeholder:text-muted-foreground focus:ring-primary/30 focus:border-primary transition-all rounded-xl"
                 />
                 <button 
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -263,21 +264,21 @@ export default function SignInViewPage() {
                 id="remember" 
                 checked={rememberDevice} 
                 onCheckedChange={(checked) => setRememberDevice(checked as boolean)}
-                className="border-white/20 data-[state=checked]:bg-primary"
+                className="border-border data-[state=checked]:bg-primary"
               />
-              <label htmlFor="remember" className="text-sm font-medium leading-none text-gray-400 cursor-pointer select-none">
+              <label htmlFor="remember" className="text-sm font-medium leading-none text-muted-foreground cursor-pointer select-none">
                 Trust this device for 30 days
               </label>
             </div>
 
             <Button 
               onClick={() => handleSignIn()}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
               disabled={isLoading}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                   <span>Authenticating...</span>
                 </div>
               ) : "Sign In with Credentials"}
@@ -285,10 +286,10 @@ export default function SignInViewPage() {
 
             <div className='relative'>
               <div className='absolute inset-0 flex items-center'>
-                <span className='w-full border-t border-white/10' />
+                <span className='w-full border-t border-border' />
               </div>
               <div className='relative flex justify-center text-xs uppercase'>
-                <span className='bg-[#020817] px-4 text-gray-500 font-medium'>
+                <span className='bg-background px-4 text-muted-foreground font-medium'>
                   Secure Biometrics
                 </span>
               </div>
@@ -297,7 +298,7 @@ export default function SignInViewPage() {
             <Button 
               onClick={handleBiometricLogin}
               variant="outline"
-              className="w-full h-12 border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all"
+              className="w-full h-12 border-border bg-card hover:bg-accent hover:text-accent-foreground text-foreground font-semibold rounded-xl transition-all"
               disabled={isLoading}
             >
               <Fingerprint className="mr-2 h-5 w-5 text-primary" />
@@ -305,35 +306,15 @@ export default function SignInViewPage() {
             </Button>
           </div>
 
-          <div className="space-y-4">
-            <div className='relative flex justify-center text-[10px] uppercase tracking-widest'>
-              <span className='text-gray-500 font-bold'>
-                Rapid Test Access
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {['Super Admin', 'HR', 'Manager', 'Employee'].map((role) => (
-                <Button 
-                  key={role}
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setDemoAccount(role)}
-                  className="h-10 text-[11px] font-bold border border-white/5 bg-white/5 hover:bg-primary/10 hover:text-primary transition-all rounded-lg"
-                >
-                  {role}
-                </Button>
-              ))}
-            </div>
-          </div>
+          {/* Rapid Test Access removed */}
 
           <div className="flex flex-col space-y-4 text-center">
-            <div className="flex items-center justify-center gap-4 text-[11px] text-gray-600">
+            <div className="flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Laptop className="w-3 h-3" />
                 <span>Device Tracked</span>
               </div>
-              <div className="w-1 h-1 rounded-full bg-gray-800" />
+              <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
               <div className="flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3" />
                 <span>AES-256 Encrypted</span>

@@ -61,7 +61,8 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
       email: user?.email ?? '',
       phone: user?.phone ?? '',
       role: user?.role ?? '',
-      status: user?.status ?? 'Active'
+      status: user?.status ?? 'Active',
+      password: user?.password ?? ''
     } as UserFormValues,
     validators: {
       onSubmit: userSchema
@@ -157,6 +158,13 @@ export function UserFormSheet({ user, open, onOpenChange }: UserFormSheetProps) 
                 validators={{
                   onBlur: z.string().min(1, 'Please select a status')
                 }}
+              />
+
+              <FormTextField
+                name='password'
+                label={isEdit ? 'Password (Leave blank to keep current)' : 'Password'}
+                placeholder={isEdit ? 'Enter new password or leave blank' : 'Enter standard password'}
+                type='text'
               />
             </form.Form>
           </form.AppForm>

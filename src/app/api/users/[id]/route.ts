@@ -31,7 +31,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { first_name, last_name, email, role } = body;
+    const { first_name, last_name, email, role, password } = body;
 
     let dbRole: UserRole = UserRole.EMPLOYEE;
     const rUpper = (role || '').toUpperCase().replace(' ', '_');
@@ -40,13 +40,20 @@ export async function PUT(
     else if (rUpper === 'MANAGER') dbRole = UserRole.MANAGER;
     else if (rUpper === 'ADMIN') dbRole = UserRole.ADMIN;
 
+    const updateData: any = {
+      name: `${first_name} ${last_name}`,
+      email,
+      role: dbRole,
+    };
+
+    if (password && password.trim() !== '') {
+      const { encryptPassword } = require('@/lib/crypto-password');
+      updateData.password = encryptPassword(password);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: {
-        name: `${first_name} ${last_name}`,
-        email,
-        role: dbRole,
-      }
+      data: updateData
     });
 
     return NextResponse.json({

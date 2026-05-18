@@ -107,7 +107,7 @@ export function OrgSwitcher() {
             <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
               <Briefcase className='size-4' />
             </div>
-            <div className='grid flex-1 text-left text-sm leading-tight'>
+            <div className='grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden'>
               <span className='truncate font-semibold'>EGC Workforce</span>
               <span className='truncate text-xs'>Assigned Workspace</span>
             </div>
@@ -137,7 +137,7 @@ export function OrgSwitcher() {
                   <Building className='size-4' />
                 )}
               </div>
-              <div className='grid flex-1 text-left text-sm leading-tight'>
+              <div className='grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden'>
                 <span className='truncate font-semibold'>
                   {activeCompany ? activeCompany.name : 'Super Admin Workspace'}
                 </span>
@@ -145,22 +145,22 @@ export function OrgSwitcher() {
                   {activeCompany ? 'Tenant Active' : 'Global View'}
                 </span>
               </div>
-              <ChevronsUpDown className='ml-auto size-4 text-neutral-400' />
+              <ChevronsUpDown className='ml-auto size-4 text-neutral-400 group-data-[collapsible=icon]:hidden' />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className='w-64 rounded-xl border-neutral-800/80 bg-neutral-950/95 backdrop-blur-lg text-white'
+            className='w-64 rounded-xl border-border bg-popover/95 backdrop-blur-md text-popover-foreground shadow-lg'
             align='start'
             side='bottom'
             sideOffset={4}
           >
-            <DropdownMenuLabel className='text-xs font-semibold text-neutral-400 px-3 py-2'>
+            <DropdownMenuLabel className='text-xs font-semibold text-muted-foreground px-3 py-2'>
               Switch Company Context
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className='bg-neutral-800/60' />
+            <DropdownMenuSeparator />
             
             {companies.length === 0 ? (
-              <div className='px-3 py-4 text-center text-xs text-neutral-500'>
+              <div className='px-3 py-4 text-center text-xs text-muted-foreground'>
                 No companies created yet.
               </div>
             ) : (
@@ -172,11 +172,11 @@ export function OrgSwitcher() {
                     onClick={() => handleSwitch(company.id)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
                       isActive 
-                        ? 'bg-neutral-800/60 text-white font-medium' 
-                        : 'hover:bg-neutral-800/30 text-neutral-300 hover:text-white'
+                        ? 'bg-accent text-accent-foreground font-semibold' 
+                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
                     }`}
                   >
-                    <div className='flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground overflow-hidden shrink-0 border border-neutral-800/40'>
+                    <div className='flex aspect-square size-8 items-center justify-center rounded-md bg-primary text-primary-foreground overflow-hidden shrink-0 border border-border'>
                       {company.logo ? (
                         <img src={company.logo} alt={company.name} className='size-full object-cover' />
                       ) : (
@@ -185,7 +185,7 @@ export function OrgSwitcher() {
                     </div>
                     <div className='flex-1 text-left text-xs truncate leading-tight'>
                       <span className='block truncate font-semibold'>{company.name}</span>
-                      <span className='block truncate text-[10px] text-neutral-400'>{company.city}, {company.state}</span>
+                      <span className='block truncate text-[10px] text-muted-foreground'>{company.city}, {company.state}</span>
                     </div>
                     {isActive && (
                       <Check className='size-4 text-emerald-500 shrink-0' />
@@ -195,10 +195,10 @@ export function OrgSwitcher() {
               })
             )}
 
-            <DropdownMenuSeparator className='bg-neutral-800/60' />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => router.push('/dashboard/settings')}
-              className='flex items-center gap-2 px-3 py-2.5 rounded-lg text-neutral-400 hover:text-white cursor-pointer hover:bg-neutral-800/30 text-xs'
+              className='flex items-center gap-2 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer hover:bg-accent/50 text-xs'
             >
               <Plus className='size-4' />
               <span>Create New Company</span>

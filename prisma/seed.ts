@@ -116,11 +116,11 @@ async function main() {
   });
 
   // 5. Define passwords
-  const salt = await bcrypt.genSalt(10);
-  const adminPassword = await bcrypt.hash('superadmin123', salt);
-  const hrPassword = await bcrypt.hash('hr123', salt);
-  const managerPassword = await bcrypt.hash('manager123', salt);
-  const employeePassword = await bcrypt.hash('employee123', salt);
+  const { encryptPassword } = require('../src/lib/crypto-password');
+  const adminPassword = encryptPassword('superadmin123');
+  const hrPassword = encryptPassword('hr123');
+  const managerPassword = encryptPassword('manager123');
+  const employeePassword = encryptPassword('employee123');
 
   // 6. Create Users for EGC India (assigned to EGC Company)
   await prisma.user.create({
